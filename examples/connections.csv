@@ -1,0 +1,7 @@
+source,target
+router,server
+server,database
+router,pc
+router,printer
+
+

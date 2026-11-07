@@ -1,0 +1,6 @@
+id,name,type,criticality
+router,Маршрутизатор,network,high
+server,Сервер,server,high
+database,База данных,database,high
+pc,Компьютер сотрудника,host,low
+printer,Принтер,device,medium
