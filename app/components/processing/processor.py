@@ -50,7 +50,9 @@ def process_by_criticality(network: NetworkConfig) -> dict:
 
         if host.criticality in important or has_important_service:
             result["hosts"].append({
-                "name": host.name,
+                "id": host.node_id,            # <--- ДОБАВИЛИ ID
+                "name": host.name,             # <--- Красивое имя
+                "type": host.node_type,        # <--- ДОБАВИЛИ ТИП
                 "ip": host.ip_address,
                 "criticality": host.criticality.value,
                 "services": [
@@ -59,6 +61,17 @@ def process_by_criticality(network: NetworkConfig) -> dict:
                     if s.criticality in important
                 ]
             })
+
+    # Связи остаются по ID
+    important_names = {h["id"] for h in result["hosts"]}
+    for conn in network.connections:
+        if conn.source in important_names and conn.target in important_names:
+            result["connections"].append({
+                "from": conn.source,
+                "to": conn.target,
+                "type": conn.connection_type
+            })
+    return result
 
     important_names = {h["name"] for h in result["hosts"]}
     for conn in network.connections:
