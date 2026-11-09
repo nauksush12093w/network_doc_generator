@@ -19,11 +19,15 @@ class Service:
 @dataclass
 class Host:
     """Описывает хост (сервер, компьютер, сетевое устройство)"""
-    name: str
-    ip_address: str
+    name: str               # Красивое имя (Маршрутизатор)
+    ip_address: str         # IP (или заглушка)
     os: str = "Unknown"
     criticality: Criticality = Criticality.LOW
     services: List[Service] = field(default_factory=list)
+    
+    # НОВЫЕ ПОЛЯ:
+    node_id: str = ""       # Короткий ID (router, server)
+    node_type: str = "host" # Тип (network, server, database, device, host)
 
 @dataclass
 class Connection:
