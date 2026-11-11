@@ -1,10 +1,5 @@
-
-# Проверка корректности входных данных о сети.
-
 from ipaddress import ip_address
 
-
-# Допустимые типы сетевых устройств.
 ALLOWED_TYPES = {
     "network",
     "server",
@@ -13,8 +8,6 @@ ALLOWED_TYPES = {
     "device"
 }
 
-
-# Допустимые уровни критичности.
 ALLOWED_CRITICALITY = {
     "low",
     "medium",
@@ -24,9 +17,6 @@ ALLOWED_CRITICALITY = {
 
 
 def validate_structure(data):
-    """
-    Проверяет общую структуру входных данных.
-    """
 
     if not isinstance(data, dict):
         raise ValueError(
@@ -55,10 +45,7 @@ def validate_structure(data):
 
 
 def validate_nodes(nodes):
-    """
-    Проверяет каждый узел сети.
-    """
-
+   
     errors = []
     existing_ids = set()
 
@@ -70,7 +57,6 @@ def validate_nodes(nodes):
             )
             continue
 
-        # Проверка обязательных полей.
         required_fields = [
             "id",
             "name",
@@ -84,13 +70,11 @@ def validate_nodes(nodes):
                     f"Узел №{index + 1}: отсутствует поле '{field}'."
                 )
 
-        # Если нет обязательных полей, дальше проверять нечего.
         if any(field not in node for field in required_fields):
             continue
 
         node_id = node["id"]
 
-        # Проверка идентификатора.
         if not isinstance(node_id, str) or not node_id.strip():
             errors.append(
                 f"Узел №{index + 1}: ID должен быть непустой строкой."
@@ -104,13 +88,11 @@ def validate_nodes(nodes):
         else:
             existing_ids.add(node_id)
 
-        # Проверка названия.
         if not isinstance(node["name"], str) or not node["name"].strip():
             errors.append(
                 f"Узел '{node_id}': некорректное название."
             )
 
-        # Проверка типа устройства.
         if (
             not isinstance(node["type"], str)
             or node["type"].lower() not in ALLOWED_TYPES
@@ -119,7 +101,6 @@ def validate_nodes(nodes):
                 f"Узел '{node_id}': неизвестный тип устройства."
             )
 
-        # Проверка критичности.
         if (
             not isinstance(node["criticality"], str)
             or node["criticality"].lower() not in ALLOWED_CRITICALITY
@@ -128,8 +109,6 @@ def validate_nodes(nodes):
                 f"Узел '{node_id}': некорректная критичность."
             )
 
-        # IP-адрес необязательный, но если он указан,
-        # то должен быть корректным.
         ip = node.get("ip_address")
 
         if ip is not None:
@@ -149,15 +128,11 @@ def validate_nodes(nodes):
 
 
 def validate_connections(connections, existing_ids):
-    """
-    Проверяет соединения между узлами сети.
-    """
 
     errors = []
 
     for index, connection in enumerate(connections):
 
-        # Каждое соединение должно содержать два ID.
         if (
             not isinstance(connection, (list, tuple))
             or len(connection) != 2
@@ -170,21 +145,18 @@ def validate_connections(connections, existing_ids):
 
         source, target = connection
 
-        # Проверяем, что ID являются строками.
         if not isinstance(source, str) or not isinstance(target, str):
             errors.append(
                 f"Соединение №{index + 1}: ID должны быть строками."
             )
             continue
 
-        # Проверяем существование первого узла.
         if source not in existing_ids:
             errors.append(
                 f"Соединение №{index + 1}: "
                 f"узел '{source}' не найден."
             )
 
-        # Проверяем существование второго узла.
         if target not in existing_ids:
             errors.append(
                 f"Соединение №{index + 1}: "
@@ -195,12 +167,6 @@ def validate_connections(connections, existing_ids):
 
 
 def validate_network(data):
-    """
-    Главная функция проверки всей сетевой конфигурации.
-
-    Если данные корректны, возвращает их.
-    Если найдены ошибки, сообщает о них.
-    """
 
     validate_structure(data)
 
