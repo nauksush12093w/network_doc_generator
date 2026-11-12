@@ -1,5 +1,4 @@
-from models import NetworkConfig, Criticality
-
+from .models import NetworkConfig, Criticality
 
 def process_by_hosts(network: NetworkConfig) -> dict:
     """Профиль 'по хостам': все хосты + все связи."""

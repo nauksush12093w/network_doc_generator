@@ -1,4 +1,4 @@
-from models import Host, Service, NetworkConfig, Criticality, Connection
+from .models import Host, Service, NetworkConfig, Criticality, Connection
 
 
 def convert_dict_to_network(data: dict) -> NetworkConfig:
