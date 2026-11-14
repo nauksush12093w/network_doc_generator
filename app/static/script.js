@@ -41,7 +41,8 @@ try {
       state.criticality = "all";
     if (!["diagram", "code"].includes(state.tab)) state.tab = "diagram";
   }
-} catch {
+} 
+catch {
   /* Используем настройки по умолчанию. */
 }
 const titles = {
@@ -88,6 +89,15 @@ function download(name, text, type = "text/plain") {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function getServerResult() {
+  try {
+    return JSON.parse(
+      sessionStorage.getItem("netforma-result") || "null"
+    );
+  } catch {
+    return null;
+  }
 }
 // Главная иллюстрация не содержит IP и портов. Результат показывает учебные данные.
 function diagram(hero = false) {
@@ -157,6 +167,47 @@ function fileInfo() {
     ? `<div class="file"><div><strong style="font-size:12px">${escapeHTML(state.file.name)}</strong><br><span class="small">${state.demo ? "Демонстрационные данные" : Math.ceil(state.file.size / 1024) + " КБ · файл выбран"}</span></div><button aria-label="Удалить файл" style="background:transparent" onclick="state.file=null;state.demo=false;render()">✕</button></div>`
     : "";
 }
+async function generateFromServer() {
+  try {
+    const file = await getUploadedFile();
+
+    if (!file) {
+      toast("Файл не найден. Загрузите его ещё раз.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("profile", state.profile);
+
+    toast("Генерация диаграммы...");
+
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      toast(result.error || "Не удалось создать диаграмму.");
+      return;
+    }
+
+    sessionStorage.setItem(
+      "netforma-result",
+      JSON.stringify(result)
+    );
+
+    state.generated = true;
+    state.tab = "diagram";
+    go("results");
+
+  } catch (error) {
+    console.error(error);
+    toast("Не удалось связаться с сервером.");
+  }
+}
 function settings() {
   return (
     head(
@@ -180,7 +231,7 @@ function settings() {
       )
       .join(
         "",
-      )}<div class="field"><label for="criticality">Уровень критичности</label><select id="criticality" onchange="state.criticality=this.value;saveState()"><option value="all" ${state.criticality === "all" ? "selected" : ""}>Все уровни</option><option value="high" ${state.criticality === "high" ? "selected" : ""}>Только высокий</option><option value="medium" ${state.criticality === "medium" ? "selected" : ""}>Средний и высокий</option></select></div><label class="check"><input type="checkbox" ${state.labels ? "checked" : ""} onchange="state.labels=this.checked;saveState()">Показывать подписи портов на связях</label></section><section class="card" style="align-self:start"><span class="tag">ПАРАМЕТРЫ ГЕНЕРАЦИИ</span><h2 style="margin-top:18px">Всё готово к запуску</h2><div class="summary"><span>Файл</span><b>${state.file ? escapeHTML(state.file.name) : "Не выбран"}</b></div><div class="summary"><span>Профиль</span><b>${profiles[state.profile]}</b></div><div class="summary"><span>Результат</span><b>PlantUML + PNG</b></div><button class="btn" style="width:100%;margin-top:22px" onclick="state.generated=true;state.tab='diagram';go('results')">Показать пример результата →</button><a href="upload.html" class="small" style="display:block;text-align:center;margin-top:16px">← Назад к файлу</a></section></div>`
+      )}<div class="field"><label for="criticality">Уровень критичности</label><select id="criticality" onchange="state.criticality=this.value;saveState()"><option value="all" ${state.criticality === "all" ? "selected" : ""}>Все уровни</option><option value="high" ${state.criticality === "high" ? "selected" : ""}>Только высокий</option><option value="medium" ${state.criticality === "medium" ? "selected" : ""}>Средний и высокий</option></select></div><label class="check"><input type="checkbox" ${state.labels ? "checked" : ""} onchange="state.labels=this.checked;saveState()">Показывать подписи портов на связях</label></section><section class="card" style="align-self:start"><span class="tag">ПАРАМЕТРЫ ГЕНЕРАЦИИ</span><h2 style="margin-top:18px">Всё готово к запуску</h2><div class="summary"><span>Файл</span><b>${state.file ? escapeHTML(state.file.name) : "Не выбран"}</b></div><div class="summary"><span>Профиль</span><b>${profiles[state.profile]}</b></div><div class="summary"><span>Результат</span><b>PlantUML + PNG</b></div><button class="btn" style="width:100%;margin-top:22px" onclick="generateFromServer()">Сгенерировать диаграмму →</button><a href="upload.html" class="small" style="display:block;text-align:center;margin-top:16px">← Назад к файлу</a></section></div>`
   );
 }
 function puml() {
@@ -199,15 +250,69 @@ function puml() {
   );
 }
 function results() {
+  const result = getServerResult();
+
+  if (!result || !result.statistics) {
+    return (
+      head(
+        "ШАГ 03 / 03",
+        "Результаты генерации",
+        "Сначала загрузите файл и запустите генерацию."
+      ) + steps(3) +
+      `<div class="notice">
+        <div><b>Результаты не найдены</b><br>
+        Вернитесь к настройкам и запустите генерацию.</div>
+      </div>`
+    );
+  }
+
+  const stats = result.statistics;
+
+  const hostsCount = stats.hosts?.length || 0;
+  const connectionsCount = stats.connections?.length || 0;
+
   return (
     head(
       "ШАГ 03 / 03",
       "Результаты генерации",
       "Просмотрите схему и сохраните файлы документации.",
-      '<a class="btn secondary" href="upload.html" onclick="state.file=null;state.demo=false;saveState()">+ Новый файл</a>',
+      '<a class="btn secondary" href="upload.html">+ Новый файл</a>'
     ) +
     steps(3) +
-    `<div class="notice"><div><b>Демонстрационный результат</b><br>Показана учебная сеть. Генерация PlantUML и PNG по вашему файлу требует подключения серверных модулей команды.</div></div><div class="metrics"><div class="metric"><span>Хосты</span><strong>3</strong></div><div class="metric"><span>Сервисы</span><strong>3</strong></div><div class="metric"><span>Соединения</span><strong>${state.criticality === "high" ? "1" : "2"}</strong></div></div><div class="workspace"><div class="toolbar"><div class="tabs"><button class="${state.tab === "diagram" ? "active" : ""}" onclick="state.tab='diagram';render()">Схема сети</button><button class="${state.tab === "code" ? "active" : ""}" onclick="state.tab='code';render()">Код PlantUML</button></div><span class="tag">${profiles[state.profile]}</span></div><div class="diagram">${state.tab === "code" ? "<pre>" + escapeHTML(puml()) + "</pre>" : resultDiagram()}</div><div class="legend"><span><i></i>Компонент сети</span><span><i class="dark"></i>Высокая критичность</span><span>→ Направление связи</span></div></div><div class="actions"><a class="btn secondary" href="settings.html">← Изменить настройки</a><div style="display:flex;gap:10px"><button class="btn secondary" onclick="download('network-example.puml',puml())">↓ PlantUML</button><button class="btn" onclick="savePNG()">↓ Скачать PNG</button></div></div>`
+    `<div class="notice">
+      <div><b>Файл успешно обработан</b><br>
+      Схема создана серверными модулями.</div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><span>Хосты</span><strong>${hostsCount}</strong></div>
+      <div class="metric"><span>Сервисы</span><strong>—</strong></div>
+      <div class="metric"><span>Соединения</span><strong>${connectionsCount}</strong></div>
+    </div>
+    <div class="workspace">
+      <div class="toolbar">
+        <div class="tabs">
+          <button class="${state.tab === "diagram" ? "active" : ""}"
+            onclick="state.tab='diagram';render()">Схема сети</button>
+          <button class="${state.tab === "code" ? "active" : ""}"
+            onclick="state.tab='code';render()">Код PlantUML</button>
+        </div>
+        <span class="tag">${profiles[state.profile]}</span>
+      </div>
+      <div class="diagram">
+        ${
+          state.tab === "diagram"
+            ? `<img src="${result.png_url}" alt="Схема сети" style="width:100%;height:auto;">`
+            : `<a href="${result.puml_url}" target="_blank">Открыть исходный код PlantUML</a>`
+        }
+      </div>
+    </div>
+    <div class="actions">
+      <a class="btn secondary" href="settings.html">← Изменить настройки</a>
+      <div style="display:flex;gap:10px">
+        <a class="btn secondary" href="${result.puml_url}" download>↓ PlantUML</a>
+        <a class="btn" href="${result.png_url}" download>↓ Скачать PNG</a>
+      </div>
+    </div>`
   );
 }
 function resultDiagram() {
@@ -229,6 +334,67 @@ function useDemo() {
   };
   state.demo = true;
   go("settings");
+}
+const FILE_DB_NAME = "netforma-files";
+const FILE_STORE_NAME = "uploads";
+
+function openFileDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(FILE_DB_NAME, 1);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+
+      if (!db.objectStoreNames.contains(FILE_STORE_NAME)) {
+        db.createObjectStore(FILE_STORE_NAME);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveUploadedFile(file) {
+  const db = await openFileDB();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(FILE_STORE_NAME, "readwrite");
+
+    transaction.objectStore(FILE_STORE_NAME).put(file, "network-file");
+
+    transaction.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error);
+    };
+
+    transaction.onabort = () => {
+      db.close();
+      reject(transaction.error);
+    };
+  });
+}
+
+async function getUploadedFile() {
+  const db = await openFileDB();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(FILE_STORE_NAME, "readonly");
+    const request = transaction
+      .objectStore(FILE_STORE_NAME)
+      .get("network-file");
+
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+
+    transaction.oncomplete = () => db.close();
+    transaction.onerror = () => db.close();
+  });
 }
 async function choose(file) {
   if (!file) return;
@@ -252,10 +418,17 @@ async function choose(file) {
       return;
     }
   }
-  state.file = { name: file.name, size: file.size };
-  state.demo = false;
-  saveState();
-  render();
+try {
+  await saveUploadedFile(file);
+} catch (error) {
+  toast("Не удалось сохранить файл в браузере.");
+  return;
+}
+
+state.file = { name: file.name, size: file.size };
+state.demo = false;
+saveState();
+render();
 }
 function render() {
   let page = document.body.dataset.page || "home";

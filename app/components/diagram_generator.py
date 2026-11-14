@@ -1,8 +1,18 @@
-# участник 5
+import os
+import subprocess
+
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 from .processing.models import NetworkConfig
 
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+load_dotenv(BASE_DIR / ".env")
+
+PLANTUML_JAR = os.getenv("PLANTUML_JAR")
 
 COLORS = {
     "low": "#E2F0D9",
@@ -10,7 +20,9 @@ COLORS = {
     "high": "#FCE4D6",
     "critical": "#F4CCCC",
 }
+
 IMPORTANT = {"high", "critical"}
+
 TITLES = {
     "hosts": "Схема сети по узлам",
     "services": "Схема сети по сервисам",
@@ -52,7 +64,9 @@ def _host_label(host):
 def _service_label(service):
     parts = [_text(service.name or "Без названия")]
     if service.port:
-        parts.append(f"Порт: {service.port}/{_text(service.protocol).upper()}")
+        parts.append(
+            f"Порт: {service.port}/{_text(service.protocol).upper()}"
+        )
     parts.append(f"Критичность: {_level(service.criticality).upper()}")
     return r"\n".join(parts)
 
@@ -64,6 +78,7 @@ def _node_type(host):
 
 def _host_aliases(network):
     aliases = {}
+
     for index, host in enumerate(network.hosts):
         key = _host_key(host)
         if key in aliases:
@@ -79,97 +94,198 @@ def _host_aliases(network):
 
 def _connections(network, aliases, included=None):
     result = []
+
     for connection in network.connections:
         if included is not None and (
-            connection.source not in included or connection.target not in included
+            connection.source not in included
+            or connection.target not in included
         ):
             continue
+
         line = f"{aliases[connection.source]} --> {aliases[connection.target]}"
+
         if connection.connection_type != "Network":
             line += f" : {_text(connection.connection_type)}"
+
         result.append(line)
+
     return result
 
 
 def generate_plantuml(network: NetworkConfig, profile="hosts") -> str:
     """Создаёт диаграмму PlantUML: hosts, services или critical."""
+
     if not isinstance(network, NetworkConfig):
         raise TypeError("Нужно передать объект NetworkConfig.")
+
     if profile not in {"hosts", "services", "critical"}:
         raise ValueError("Профиль должен быть hosts, services или critical.")
 
     aliases = _host_aliases(network)
-    lines = ["@startuml", f"title {TITLES[profile]}", "left to right direction", ""]
+
+    lines = [
+        "@startuml",
+        f"title {TITLES[profile]}",
+        "left to right direction",
+        ""
+    ]
 
     if profile == "hosts":
         for host in network.hosts:
             alias = aliases[_host_key(host)]
             level = _level(host.criticality)
+
             lines.append(
                 f'{_node_type(host)} "{_host_label(host)}" as {alias} {COLORS[level]}'
             )
+
         if not network.hosts:
             lines.append('rectangle "В описании сети нет узлов"')
+
         lines.extend([""] + _connections(network, aliases))
 
     elif profile == "services":
         for host in network.hosts:
             alias = aliases[_host_key(host)]
             level = _level(host.criticality)
+
             lines.append(
                 f'package "{_host_label(host)}" as {alias} {COLORS[level]} {{'
             )
+
             if host.services:
                 for index, service in enumerate(host.services):
                     service_level = _level(service.criticality)
+
                     lines.append(
                         f'  component "{_service_label(service)}" '
                         f'as service_{alias}_{index} {COLORS[service_level]}'
                     )
             else:
                 lines.append('  rectangle "Сервисы не указаны"')
+
             lines.append("}")
+
         if not network.hosts:
             lines.append('rectangle "В описании сети нет узлов"')
+
         lines.extend([""] + _connections(network, aliases))
 
     else:
         selected = [
             host for host in network.hosts
             if _level(host.criticality) in IMPORTANT
-            or any(_level(service.criticality) in IMPORTANT for service in host.services)
+            or any(
+                _level(service.criticality) in IMPORTANT
+                for service in host.services
+            )
         ]
+
         selected_keys = {_host_key(host) for host in selected}
 
         for host in selected:
             alias = aliases[_host_key(host)]
             level = _level(host.criticality)
+
             lines.append(
                 f'{_node_type(host)} "{_host_label(host)}" as {alias} {COLORS[level]}'
             )
+
             important_services = [
                 service for service in host.services
                 if _level(service.criticality) in IMPORTANT
             ]
+
             if important_services:
                 lines.extend([f"note right of {alias}", "Важные сервисы:"])
+
                 lines.extend(
                     f"{_text(service.name)} ({_level(service.criticality).upper()})"
                     for service in important_services
                 )
+
                 lines.append("end note")
 
         if not selected:
             lines.append('rectangle "Нет узлов с критичностью HIGH/CRITICAL"')
+
         lines.extend([""] + _connections(network, aliases, selected_keys))
 
     lines.extend(["", "@enduml", ""])
+
     return "\n".join(lines)
 
 
 def write_plantuml_file(source: str, output_path: str | Path) -> Path:
     """Сохраняет исходный код диаграммы в файл .puml."""
+
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(source, encoding="utf-8")
+
     return path
+
+
+def render_plantuml_to_png(
+    puml_path: str | Path,
+    output_dir: str | Path = "output"
+) -> Path:
+    """Преобразует файл PlantUML в PNG."""
+
+    puml_path = Path(puml_path)
+    output_dir = Path(output_dir)
+
+    if not puml_path.exists():
+        raise FileNotFoundError(
+            f"Файл PlantUML не найден: {puml_path}"
+        )
+
+    if not PLANTUML_JAR:
+        raise RuntimeError(
+            "Не задан PLANTUML_JAR в файле .env"
+        )
+
+    plantuml_jar = Path(PLANTUML_JAR)
+
+    if not plantuml_jar.is_absolute():
+        plantuml_jar = BASE_DIR / plantuml_jar
+
+    if not plantuml_jar.is_file():
+        raise FileNotFoundError(
+            f"PlantUML JAR не найден: {plantuml_jar}"
+        )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        subprocess.run(
+            [
+                "java",
+                "-jar",
+                str(plantuml_jar),
+                "-tpng",
+                "-o",
+                str(output_dir.resolve()),
+                str(puml_path.resolve())
+            ],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+
+    except FileNotFoundError as error:
+        raise RuntimeError(
+            "Java не найдена. Проверьте установку Java."
+        ) from error
+
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(
+            f"Ошибка генерации PNG: {error.stderr}"
+        ) from error
+
+    png_path = output_dir / f"{puml_path.stem}.png"
+
+    if not png_path.exists():
+        raise RuntimeError("PNG-файл не был создан.")
+
+    return png_path
