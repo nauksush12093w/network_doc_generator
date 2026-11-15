@@ -201,7 +201,6 @@ p {
   font-size: 13px;
 }
 
-/* КНОПКИ */
 .btn {
   min-height: 42px;
   padding: 11px 20px;
@@ -246,7 +245,6 @@ p {
   box-shadow: none;
 }
 
-/* Кнопка внутри главного баннера */
 .hero .btn {
   margin-top: 27px;
   background: var(--ink);
@@ -257,7 +255,6 @@ p {
   background: #3b4358;
 }
 
-/* Выбор CSV-файла */
 #connectionsinput {
   max-width: 100%;
   font-family: inherit;
@@ -805,7 +802,6 @@ footer {
   }
 }
 
-/* Уточнения по обновлённым макетам Pixso */
 body {
   font-family: "Segoe UI", Arial, sans-serif;
 }
