@@ -1,11 +1,7 @@
-
 from .models import Host, Service, NetworkConfig, Criticality, Connection
 
 
 def create_sample_network() -> NetworkConfig:
-    """Создает тестовую сеть для проверки обработки данных"""
-
-    # 1. Веб-сервер (высокая критичность)
     web = Host(
         name="WebServer-01",
         ip_address="192.168.1.10",
@@ -17,7 +13,6 @@ def create_sample_network() -> NetworkConfig:
     web.services.append(Service(name="Nginx", port=80, criticality=Criticality.HIGH))
     web.services.append(Service(name="Node.js", port=3000, criticality=Criticality.HIGH))
 
-    # 2. База данных (критичная)
     db = Host(
         name="DBServer-01",
         ip_address="192.168.1.20",
@@ -28,7 +23,6 @@ def create_sample_network() -> NetworkConfig:
     )
     db.services.append(Service(name="PostgreSQL", port=5432, criticality=Criticality.CRITICAL))
 
-    # 3. Резервный сервер (низкая критичность)
     backup = Host(
         name="BackupServer-01",
         ip_address="192.168.1.30",
@@ -39,7 +33,6 @@ def create_sample_network() -> NetworkConfig:
     )
     backup.services.append(Service(name="Rsync", port=873, criticality=Criticality.LOW))
 
-    # 4. Компьютер администратора (средняя критичность)
     admin_pc = Host(
         name="AdminPC-01",
         ip_address="192.168.1.100",
@@ -49,7 +42,6 @@ def create_sample_network() -> NetworkConfig:
         node_type="host"
     )
 
-    # Связи между узлами
     connections = [
         Connection(source="web-server-01", target="db-server-01", connection_type="DB"),
         Connection(source="admin-pc-01", target="web-server-01", connection_type="SSH"),
