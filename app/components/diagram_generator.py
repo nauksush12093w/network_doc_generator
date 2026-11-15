@@ -61,9 +61,9 @@ def _host_label(host):
     return r"\n".join(parts)
 
 
-def _service_label(service):
+def _service_label(service, show_ports=True):
     parts = [_text(service.name or "Без названия")]
-    if service.port:
+    if show_ports and service.port:
         parts.append(
             f"Порт: {service.port}/{_text(service.protocol).upper()}"
         )
@@ -112,7 +112,7 @@ def _connections(network, aliases, included=None):
     return result
 
 
-def generate_plantuml(network: NetworkConfig, profile="hosts") -> str:
+def generate_plantuml(network: NetworkConfig, profile="hosts", show_ports=True) -> str:
     """Создаёт диаграмму PlantUML: hosts, services или critical."""
 
     if not isinstance(network, NetworkConfig):
@@ -158,7 +158,7 @@ def generate_plantuml(network: NetworkConfig, profile="hosts") -> str:
                     service_level = _level(service.criticality)
 
                     lines.append(
-                        f'  component "{_service_label(service)}" '
+                        f'  component "{_service_label(service, show_ports=show_ports)}" '
                         f'as service_{alias}_{index} {COLORS[service_level]}'
                     )
             else:
