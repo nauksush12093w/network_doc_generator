@@ -25,7 +25,6 @@ ALLOWED_EXTENSIONS = {".json", ".yaml", ".yml", ".csv"}
 
 @main.route("/")
 @main.route("/index.html")
-
 def index():
     return render_template("index.html")
 
@@ -50,11 +49,9 @@ def results():
 @main.route("/api/generate", methods=["POST"])
 def generate():
     uploaded_file = request.files.get("file")
+    uploaded_connections = request.files.get("connections_file")
 
-    if uploaded_file is None:
-        return jsonify({"error": "Файл не выбран"}), 400
-
-    if not uploaded_file.filename:
+    if uploaded_file is None or not uploaded_file.filename:
         return jsonify({"error": "Файл не выбран"}), 400
 
     filename = secure_filename(uploaded_file.filename)
@@ -68,14 +65,46 @@ def generate():
     if profile not in {"hosts", "services", "critical"}:
         return jsonify({"error": "Неизвестный профиль"}), 400
 
+    # Для CSV дополнительно нужен файл с соединениями
+    connections_filename = None
+
+    if extension == ".csv":
+        if uploaded_connections is None or not uploaded_connections.filename:
+            return jsonify({
+                "error": "Для CSV-файла необходимо также загрузить connections.csv"
+            }), 400
+
+        connections_filename = secure_filename(
+            uploaded_connections.filename
+        )
+
+        connections_extension = Path(connections_filename).suffix.lower()
+
+        if not connections_filename or connections_extension != ".csv":
+            return jsonify({
+                "error": "Файл соединений должен иметь формат CSV"
+            }), 400
+
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            file_path = Path(temp_dir) / filename
+            temp_path = Path(temp_dir)
+
+            # Сохраняем основной файл
+            file_path = temp_path / filename
             uploaded_file.save(file_path)
 
+            # Сохраняем файл соединений, если он загружен
+            connections_path = None
+
+            if connections_filename:
+                connections_path = temp_path / connections_filename
+                uploaded_connections.save(connections_path)
+
+            # Запускаем обработку и генерацию диаграммы
             result = generate_network_diagram(
                 file_path,
-                profile=profile
+                profile=profile,
+                connections_file=connections_path
             )
 
         return jsonify({

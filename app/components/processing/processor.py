@@ -1,14 +1,21 @@
 from .models import NetworkConfig, Criticality
 
+
 def process_by_hosts(network: NetworkConfig) -> dict:
     """Профиль 'по хостам': все хосты + все связи."""
-    result = {"hosts": [], "connections": []}
+
+    result = {
+        "hosts": [],
+        "connections": []
+    }
 
     for host in network.hosts:
         result["hosts"].append({
+            "id": host.node_id,
             "name": host.name,
             "ip": host.ip_address,
             "os": host.os,
+            "type": host.node_type,
             "criticality": host.criticality.value,
             "services_count": len(host.services)
         })
@@ -19,15 +26,27 @@ def process_by_hosts(network: NetworkConfig) -> dict:
             "to": conn.target,
             "type": conn.connection_type
         })
+
     return result
 
 
 def process_by_services(network: NetworkConfig) -> dict:
     """Профиль 'по сервисам': группировка сервисов по хостам."""
-    result = {"hosts": []}
+
+    result = {
+        "hosts": []
+    }
 
     for host in network.hosts:
-        host_data = {"name": host.name, "ip": host.ip_address, "services": []}
+
+        host_data = {
+            "id": host.node_id,
+            "name": host.name,
+            "ip": host.ip_address,
+            "criticality": host.criticality.value,
+            "services": []
+        }
+
         for svc in host.services:
             host_data["services"].append({
                 "name": svc.name,
@@ -35,49 +54,67 @@ def process_by_services(network: NetworkConfig) -> dict:
                 "protocol": svc.protocol,
                 "criticality": svc.criticality.value
             })
+
         result["hosts"].append(host_data)
+
     return result
 
 
 def process_by_criticality(network: NetworkConfig) -> dict:
     """Профиль 'по критичности': только HIGH и CRITICAL."""
-    important = [Criticality.HIGH, Criticality.CRITICAL]
-    result = {"hosts": [], "connections": []}
 
+    important = [
+        Criticality.HIGH,
+        Criticality.CRITICAL
+    ]
+
+    result = {
+        "hosts": [],
+        "connections": []
+    }
+
+    # Отбираем важные хосты и сервисы
     for host in network.hosts:
-        has_important_service = any(s.criticality in important for s in host.services)
+
+        has_important_service = any(
+            service.criticality in important
+            for service in host.services
+        )
 
         if host.criticality in important or has_important_service:
+
             result["hosts"].append({
-                "id": host.node_id,            # <--- ДОБАВИЛИ ID
-                "name": host.name,             # <--- Красивое имя
-                "type": host.node_type,        # <--- ДОБАВИЛИ ТИП
+                "id": host.node_id,
+                "name": host.name,
+                "type": host.node_type,
                 "ip": host.ip_address,
                 "criticality": host.criticality.value,
                 "services": [
-                    {"name": s.name, "criticality": s.criticality.value}
-                    for s in host.services
-                    if s.criticality in important
+                    {
+                        "name": service.name,
+                        "criticality": service.criticality.value
+                    }
+                    for service in host.services
+                    if service.criticality in important
                 ]
             })
 
-    # Связи остаются по ID
-    important_names = {h["id"] for h in result["hosts"]}
-    for conn in network.connections:
-        if conn.source in important_names and conn.target in important_names:
-            result["connections"].append({
-                "from": conn.source,
-                "to": conn.target,
-                "type": conn.connection_type
-            })
-    return result
+    # Добавляем связи только между отобранными хостами
+    important_ids = {
+        host["id"]
+        for host in result["hosts"]
+    }
 
-    important_names = {h["name"] for h in result["hosts"]}
     for conn in network.connections:
-        if conn.source in important_names and conn.target in important_names:
+
+        if (
+            conn.source in important_ids
+            and conn.target in important_ids
+        ):
             result["connections"].append({
                 "from": conn.source,
                 "to": conn.target,
                 "type": conn.connection_type
             })
+
     return result

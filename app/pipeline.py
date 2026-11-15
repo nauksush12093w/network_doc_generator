@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 from app.components.data_loader import load_network_file
@@ -17,13 +16,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
 
 
-def generate_network_diagram(file_path, profile="hosts"):
+def generate_network_diagram(file_path, profile="hosts", connections_file=None):
     """
     Основной процесс генерации сетевой диаграммы.
     """
 
     # 1. Загрузка и валидация
-    data = load_network_file(file_path)
+    data = load_network_file(
+        file_path,
+        connections_file=connections_file
+    )
 
     # 2. Преобразование данных в NetworkConfig
     network = convert_dict_to_network(data)

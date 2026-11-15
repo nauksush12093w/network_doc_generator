@@ -1,4 +1,6 @@
+
 from ipaddress import ip_address
+
 
 ALLOWED_TYPES = {
     "network",
@@ -13,6 +15,11 @@ ALLOWED_CRITICALITY = {
     "medium",
     "high",
     "critical"
+}
+
+ALLOWED_PROTOCOLS = {
+    "TCP",
+    "UDP"
 }
 
 
@@ -44,8 +51,77 @@ def validate_structure(data):
         )
 
 
+def validate_services(services, node_id):
+
+    errors = []
+
+    if not isinstance(services, list):
+        return [
+            f"Узел '{node_id}': раздел 'services' должен быть списком."
+        ]
+
+    for index, service in enumerate(services):
+
+        service_number = index + 1
+
+        if not isinstance(service, dict):
+            errors.append(
+                f"Узел '{node_id}', сервис №{service_number} "
+                "должен быть объектом."
+            )
+            continue
+
+        # Проверяем название
+        name = service.get("name")
+
+        if not isinstance(name, str) or not name.strip():
+            errors.append(
+                f"Узел '{node_id}', сервис №{service_number}: "
+                "некорректное название."
+            )
+
+        # Проверяем порт
+        port = service.get("port")
+
+        if (
+            not isinstance(port, int)
+            or isinstance(port, bool)
+            or not 1 <= port <= 65535
+        ):
+            errors.append(
+                f"Узел '{node_id}', сервис №{service_number}: "
+                "порт должен быть целым числом от 1 до 65535."
+            )
+
+        # Проверяем протокол
+        protocol = service.get("protocol", "TCP")
+
+        if (
+            not isinstance(protocol, str)
+            or protocol.upper() not in ALLOWED_PROTOCOLS
+        ):
+            errors.append(
+                f"Узел '{node_id}', сервис №{service_number}: "
+                "допустимые протоколы — TCP и UDP."
+            )
+
+        # Проверяем критичность сервиса
+        criticality = service.get("criticality", "low")
+
+        if (
+            not isinstance(criticality, str)
+            or criticality.lower() not in ALLOWED_CRITICALITY
+        ):
+            errors.append(
+                f"Узел '{node_id}', сервис №{service_number}: "
+                "некорректная критичность."
+            )
+
+    return errors
+
+
 def validate_nodes(nodes):
-   
+
     errors = []
     existing_ids = set()
 
@@ -109,6 +185,7 @@ def validate_nodes(nodes):
                 f"Узел '{node_id}': некорректная критичность."
             )
 
+        # Проверяем IP-адрес
         ip = node.get("ip_address")
 
         if ip is not None:
@@ -123,6 +200,12 @@ def validate_nodes(nodes):
                     errors.append(
                         f"Узел '{node_id}': неверный IP-адрес '{ip}'."
                     )
+
+        # Проверяем сервисы узла
+        if "services" in node:
+            errors.extend(
+                validate_services(node["services"], node_id)
+            )
 
     return errors, existing_ids
 
@@ -148,6 +231,12 @@ def validate_connections(connections, existing_ids):
         if not isinstance(source, str) or not isinstance(target, str):
             errors.append(
                 f"Соединение №{index + 1}: ID должны быть строками."
+            )
+            continue
+
+        if not source.strip() or not target.strip():
+            errors.append(
+                f"Соединение №{index + 1}: ID не должны быть пустыми."
             )
             continue
 

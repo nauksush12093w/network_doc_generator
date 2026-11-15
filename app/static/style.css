@@ -200,29 +200,98 @@ p {
 .pagehead p {
   font-size: 13px;
 }
+
+/* КНОПКИ */
 .btn {
-  padding: 12px 20px;
+  min-height: 42px;
+  padding: 11px 20px;
+  border: 1px solid transparent;
   border-radius: 8px;
   background: var(--accent);
   color: var(--ink);
-  font-weight: bold;
+  font-weight: 600;
   font-size: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
+  transition: background 0.2s ease, border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
+
 .btn:hover {
-  filter: brightness(0.97);
+  background: #929fe9;
+  box-shadow: 0 3px 8px rgba(80, 90, 150, 0.12);
 }
+
 .btn.secondary {
   background: #fff;
+  color: var(--ink);
   border: 1px solid var(--line);
 }
+
+.btn.secondary:hover {
+  background: #f3f5ff;
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+.btn:active {
+  box-shadow: none;
+}
+
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
+
+/* Кнопка внутри главного баннера */
+.hero .btn {
+  margin-top: 27px;
+  background: var(--ink);
+  color: white;
+}
+
+.hero .btn:hover {
+  background: #3b4358;
+}
+
+/* Выбор CSV-файла */
+#connectionsinput {
+  max-width: 100%;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+#connectionsinput::file-selector-button {
+  padding: 10px 16px;
+  margin-right: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+#connectionsinput::file-selector-button:hover {
+  background: #f3f5ff;
+  border-color: var(--accent);
+}
+
+.btn:focus-visible,
+#connectionsinput:focus-visible,
+#connectionsinput::file-selector-button:focus-visible {
+  outline: 2px solid #6576bb;
+  outline-offset: 3px;
+}
+
 .hero {
   background: var(--light);
   border-radius: 18px;
