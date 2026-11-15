@@ -8,7 +8,7 @@ let state = {
   labels: true,
   tab: "diagram",
   generated: false,
-};
+};// sessionStorage может быть недоступен при file:// — обработка этого случая ниже.
 const pages = {
   home: "index.html",
   upload: "upload.html",
@@ -25,9 +25,8 @@ function saveState() {
       "netforma-state",
       JSON.stringify({ ...state, file }),
     );
-  } 
-  catch {
-
+  } catch {
+    /* Интерфейс остаётся работоспособным без сохранения. */
   }
 }
 function go(page) {
@@ -49,9 +48,8 @@ try {
     if (!["diagram", "code"].includes(state.tab))
       state.tab = "diagram";
   }
-} 
-catch {
-
+} catch {
+  /* Используем настройки по умолчанию. */
 }
 const titles = {
   home: "Обзор",
@@ -122,7 +120,7 @@ function getServerResult() {
     return null;
   }
 }
-
+// Главная иллюстрация не содержит IP и портов. Результат показывает учебные данные.
 function diagram(hero = false) {
   const service = !hero && state.profile === "services";
   const critical = !hero && state.profile === "critical";
@@ -253,7 +251,8 @@ async function generateFromServer() {
     }
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("profile", state.profile);
+    const generatedProfile = state.profile;
+    formData.append("profile", generatedProfile);
     formData.append("criticality", state.criticality);
     formData.append("labels", String(state.labels));
     if (connectionsFile) {
@@ -271,7 +270,7 @@ async function generateFromServer() {
     }
     sessionStorage.setItem(
       "netforma-result",
-      JSON.stringify(result)
+      JSON.stringify({ ...result, profile: generatedProfile })
     );
     state.generated = true;
     state.tab = "diagram";
@@ -371,7 +370,7 @@ function results() {
           <button class="${state.tab === "code" ? "active" : ""}"
             onclick="state.tab='code';render()">Код PlantUML</button>
         </div>
-        <span class="tag">${profiles[state.profile]}</span>
+        ${profiles[result.profile] ? `<span class="tag">${profiles[result.profile]}</span>` : ""}
       </div>
       <div class="diagram">
         ${
@@ -427,6 +426,16 @@ async function useDemo() {
 }
 const FILE_DB_NAME = "netforma-files";
 const FILE_STORE_NAME = "uploads";
+function tabFileKey(key) {
+  let tabId = sessionStorage.getItem("netforma-tab-id");
+
+  if (!tabId) {
+    tabId = crypto.randomUUID();
+    sessionStorage.setItem("netforma-tab-id", tabId);
+  }
+
+  return `${tabId}:${key}`;
+}
 function openFileDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(FILE_DB_NAME, 1);
@@ -445,7 +454,7 @@ async function saveUploadedFile(file, key = "network-file") {
   const db = await openFileDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(FILE_STORE_NAME, "readwrite");
-    transaction.objectStore(FILE_STORE_NAME).put(file, key);
+    transaction.objectStore(FILE_STORE_NAME).put(file, tabFileKey(key));
     transaction.oncomplete = () => {
       db.close();
       resolve();
@@ -467,7 +476,7 @@ async function getUploadedFile(key = "network-file") {
     const transaction = db.transaction(FILE_STORE_NAME, "readonly");
     const request = transaction
       .objectStore(FILE_STORE_NAME)
-      .get(key);
+      .get(tabFileKey(key));
     request.onsuccess = () => resolve(request.result || null);
     request.onerror = () => reject(request.error);
     transaction.oncomplete = () => db.close();
@@ -480,7 +489,7 @@ async function deleteUploadedFile(key) {
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(FILE_STORE_NAME, "readwrite");
-    transaction.objectStore(FILE_STORE_NAME).delete(key);
+    transaction.objectStore(FILE_STORE_NAME).delete(tabFileKey(key));
     transaction.oncomplete = () => {
       db.close();
       resolve();
