@@ -2,7 +2,6 @@ from app.components.processing.models import (
     Host, Service, NetworkConfig, Criticality, Connection
 )
 
-# 1. Создаем веб-сервер
 web_server = Host(
     name="WebServer-01",
     ip_address="192.168.1.10",
@@ -18,7 +17,6 @@ web_server.services.append(
     )
 )
 
-# 2. Создаем сервер БД
 db_server = Host(
     name="DBServer-01",
     ip_address="192.168.1.20",
@@ -34,20 +32,17 @@ db_server.services.append(
     )
 )
 
-# 3. Создаем связь
 connection = Connection(
     source="WebServer-01",
     target="DBServer-01",
     connection_type="DB"
 )
 
-# 4. Собираем сеть
 network = NetworkConfig()
 network.hosts.append(web_server)
 network.hosts.append(db_server)
 network.connections.append(connection)
 
-# 5. Выводим результат
 print(f"Всего хостов: {len(network.hosts)}")
 
 for host in network.hosts:
