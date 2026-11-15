@@ -302,7 +302,7 @@ function settings() {
       )
       .join(
         "",
-      )}<div class="field"><label for="criticality">Уровень критичности</label><select id="criticality" onchange="state.criticality=this.value;saveState()"><option value="all" ${state.criticality === "all" ? "selected" : ""}>Все уровни</option><option value="high" ${state.criticality === "high" ? "selected" : ""}>Только высокий</option><option value="medium" ${state.criticality === "medium" ? "selected" : ""}>Средний и высокий</option></select></div><label class="check"><input type="checkbox" ${state.labels ? "checked" : ""} onchange="state.labels=this.checked;saveState()">Показывать подписи портов на связях</label></section><section class="card" style="align-self:start"><span class="tag">ПАРАМЕТРЫ ГЕНЕРАЦИИ</span><h2 style="margin-top:18px">Всё готово к запуску</h2><div class="summary"><span>Файл</span><b>${state.file ? escapeHTML(state.file.name) : "Не выбран"}</b></div><div class="summary"><span>Профиль</span><b>${profiles[state.profile]}</b></div><div class="summary"><span>Результат</span><b>PlantUML + PNG</b></div><button class="btn" style="width:100%;margin-top:22px" onclick="generateFromServer()" ${!state.file ? "disabled" : ""}>Сгенерировать диаграмму →</button><a href="upload.html" class="small" style="display:block;text-align:center;margin-top:16px">← Назад к файлу</a></section></div>`
+      )}<div class="field"><label for="criticality">Уровень критичности</label><select id="criticality" onchange="state.criticality=this.value;saveState()"><option value="all" ${state.criticality === "all" ? "selected" : ""}>Все уровни</option><option value="high" ${state.criticality === "high" ? "selected" : ""}>Только высокий</option><option value="medium" ${state.criticality === "medium" ? "selected" : ""}>Средний и высокий</option></select></div><label class="check"><input type="checkbox" ${state.labels ? "checked" : ""} onchange="state.labels=this.checked;saveState()">Показывать порты сервисов</label></section><section class="card" style="align-self:start"><span class="tag">ПАРАМЕТРЫ ГЕНЕРАЦИИ</span><h2 style="margin-top:18px">Всё готово к запуску</h2><div class="summary"><span>Файл</span><b>${state.file ? escapeHTML(state.file.name) : "Не выбран"}</b></div><div class="summary"><span>Профиль</span><b>${profiles[state.profile]}</b></div><div class="summary"><span>Результат</span><b>PlantUML + PNG</b></div><button class="btn" style="width:100%;margin-top:22px" onclick="generateFromServer()" ${!state.file ? "disabled" : ""}>Сгенерировать диаграмму →</button><a href="upload.html" class="small" style="display:block;text-align:center;margin-top:16px">← Назад к файлу</a></section></div>`
   );
 }
 function puml() {
@@ -340,6 +340,10 @@ function results() {
   const stats = result.statistics;
   const hostsCount = stats.hosts?.length || 0;
   const connectionsCount = stats.connections?.length || 0;
+      const servicesCount = (stats.hosts ?? []).reduce(
+    (total, host) => total + (host.services_count ?? host.services?.length ?? 0),
+    0,
+  );
   return (
     head(
       "ШАГ 03 / 03",
@@ -354,7 +358,7 @@ function results() {
     </div>
     <div class="metrics">
       <div class="metric"><span>Хосты</span><strong>${hostsCount}</strong></div>
-      <div class="metric"><span>Сервисы</span><strong>—</strong></div>
+      <div class="metric"><span>Сервисы</span><strong>${servicesCount}</strong></div>
       <div class="metric"><span>Соединения</span><strong>${connectionsCount}</strong></div>
     </div>
     <div class="workspace">
@@ -370,7 +374,7 @@ function results() {
       <div class="diagram">
         ${
           state.tab === "diagram"
-            ? `<img src="${result.png_url}" alt="Схема сети" style="width:100%;height:auto;">`
+            ? `<img src="${result.png_url}" alt="Схема сети" style="display:block;width:auto;max-width:100%;height:auto;margin:0 auto;">`
             : `<a href="${result.puml_url}" target="_blank">Открыть исходный код PlantUML</a>`
         }
       </div>
