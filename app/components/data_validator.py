@@ -71,7 +71,6 @@ def validate_services(services, node_id):
             )
             continue
 
-        # Проверяем название
         name = service.get("name")
 
         if not isinstance(name, str) or not name.strip():
@@ -80,7 +79,6 @@ def validate_services(services, node_id):
                 "некорректное название."
             )
 
-        # Проверяем порт
         port = service.get("port")
 
         if (
@@ -93,7 +91,6 @@ def validate_services(services, node_id):
                 "порт должен быть целым числом от 1 до 65535."
             )
 
-        # Проверяем протокол
         protocol = service.get("protocol", "TCP")
 
         if (
@@ -105,7 +102,6 @@ def validate_services(services, node_id):
                 "допустимые протоколы — TCP и UDP."
             )
 
-        # Проверяем критичность сервиса
         criticality = service.get("criticality", "low")
 
         if (
@@ -185,7 +181,6 @@ def validate_nodes(nodes):
                 f"Узел '{node_id}': некорректная критичность."
             )
 
-        # Проверяем IP-адрес
         ip = node.get("ip_address")
 
         if ip is not None:
@@ -201,7 +196,6 @@ def validate_nodes(nodes):
                         f"Узел '{node_id}': неверный IP-адрес '{ip}'."
                     )
 
-        # Проверяем сервисы узла
         if "services" in node:
             errors.extend(
                 validate_services(node["services"], node_id)
