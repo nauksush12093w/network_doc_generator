@@ -8,7 +8,7 @@ let state = {
   labels: true,
   tab: "diagram",
   generated: false,
-};// sessionStorage может быть недоступен при file:// — обработка этого случая ниже.
+};
 const pages = {
   home: "index.html",
   upload: "upload.html",
