@@ -2,7 +2,6 @@ from .models import NetworkConfig, Criticality
 
 
 def process_by_hosts(network: NetworkConfig) -> dict:
-    """Профиль 'по хостам': все хосты + все связи."""
 
     result = {
         "hosts": [],
@@ -31,7 +30,6 @@ def process_by_hosts(network: NetworkConfig) -> dict:
 
 
 def process_by_services(network: NetworkConfig) -> dict:
-    """Профиль 'по сервисам': группировка сервисов по хостам."""
 
     result = {
         "hosts": []
@@ -61,7 +59,6 @@ def process_by_services(network: NetworkConfig) -> dict:
 
 
 def process_by_criticality(network: NetworkConfig) -> dict:
-    """Профиль 'по критичности': только HIGH и CRITICAL."""
 
     important = [
         Criticality.HIGH,
@@ -73,7 +70,6 @@ def process_by_criticality(network: NetworkConfig) -> dict:
         "connections": []
     }
 
-    # Отбираем важные хосты и сервисы
     for host in network.hosts:
 
         has_important_service = any(
@@ -99,7 +95,6 @@ def process_by_criticality(network: NetworkConfig) -> dict:
                 ]
             })
 
-    # Добавляем связи только между отобранными хостами
     important_ids = {
         host["id"]
         for host in result["hosts"]
