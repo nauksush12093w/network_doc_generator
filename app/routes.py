@@ -61,6 +61,12 @@ def generate():
         return jsonify({"error": "Неподдерживаемый формат файла"}), 400
 
     profile = request.form.get("profile", "hosts")
+    show_ports = request.form.get("labels", "true") == "true"
+    criticality = request.form.get("criticality", "all")
+
+    if criticality not in {"all", "high", "medium"}:
+        return jsonify({"error": "Неизвестный уровень критичности"}), 400
+    
 
     if profile not in {"hosts", "services", "critical"}:
         return jsonify({"error": "Неизвестный профиль"}), 400
@@ -104,7 +110,9 @@ def generate():
             result = generate_network_diagram(
                 file_path,
                 profile=profile,
-                connections_file=connections_path
+                connections_file=connections_path,
+                show_ports=show_ports,
+                criticality=criticality,
             )
 
         return jsonify({
