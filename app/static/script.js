@@ -8,7 +8,7 @@ let state = {
   labels: true,
   tab: "diagram",
   generated: false,
-};// sessionStorage может быть недоступен при file:// — обработка этого случая ниже.
+};
 const pages = {
   home: "index.html",
   upload: "upload.html",
@@ -25,8 +25,9 @@ function saveState() {
       "netforma-state",
       JSON.stringify({ ...state, file }),
     );
-  } catch {
-    /* Интерфейс остаётся работоспособным без сохранения. */
+  } 
+  catch {
+
   }
 }
 function go(page) {
@@ -49,7 +50,7 @@ try {
       state.tab = "diagram";
   }
 } catch {
-  /* Используем настройки по умолчанию. */
+
 }
 const titles = {
   home: "Обзор",
@@ -120,7 +121,7 @@ function getServerResult() {
     return null;
   }
 }
-// Главная иллюстрация не содержит IP и портов. Результат показывает учебные данные.
+
 function diagram(hero = false) {
   const service = !hero && state.profile === "services";
   const critical = !hero && state.profile === "critical";
