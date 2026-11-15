@@ -116,7 +116,6 @@ def _connections(network, aliases, included=None):
 
 
 def generate_plantuml(network: NetworkConfig, profile="hosts", show_ports=True) -> str:
-    """Создаёт диаграмму PlantUML: hosts, services или critical."""
 
     if not isinstance(network, NetworkConfig):
         raise TypeError("Нужно передать объект NetworkConfig.")
@@ -220,7 +219,6 @@ def generate_plantuml(network: NetworkConfig, profile="hosts", show_ports=True) 
 
 
 def write_plantuml_file(source: str, output_path: str | Path) -> Path:
-    """Сохраняет исходный код диаграммы в файл .puml."""
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -233,7 +231,6 @@ def render_plantuml_to_png(
     puml_path: str | Path,
     output_dir: str | Path = "output"
 ) -> Path:
-    """Преобразует файл PlantUML в PNG."""
 
     puml_path = Path(puml_path)
     output_dir = Path(output_dir)
