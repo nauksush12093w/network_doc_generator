@@ -25,8 +25,9 @@ function saveState() {
       "netforma-state",
       JSON.stringify({ ...state, file }),
     );
-  } catch {
-    /* Интерфейс остаётся работоспособным без сохранения. */
+  } 
+  catch {
+
   }
 }
 function go(page) {
@@ -48,8 +49,9 @@ try {
     if (!["diagram", "code"].includes(state.tab))
       state.tab = "diagram";
   }
-} catch {
-  /* Используем настройки по умолчанию. */
+} 
+catch {
+
 }
 const titles = {
   home: "Обзор",
@@ -120,7 +122,7 @@ function getServerResult() {
     return null;
   }
 }
-// Главная иллюстрация не содержит IP и портов. Результат показывает учебные данные.
+
 function diagram(hero = false) {
   const service = !hero && state.profile === "services";
   const critical = !hero && state.profile === "critical";
