@@ -1,5 +1,6 @@
 from pathlib import Path
 import tempfile
+import re
 
 from flask import (
     Blueprint,
@@ -7,11 +8,10 @@ from flask import (
     request,
     jsonify,
     send_from_directory,
+    url_for,
 )
-from werkzeug.utils import secure_filename
 
-from app.pipeline import generate_network_diagram
-
+from app.pipeline import NetworkInputError, generate_network_diagram
 
 main = Blueprint("main", __name__)
 
@@ -21,6 +21,7 @@ OUTPUT_DIR = BASE_DIR / "output"
 ALLOWED_EXTENSIONS = {".json", ".yaml", ".yml", ".csv"}
 
 
+# Страницы интерфейса
 
 @main.route("/")
 @main.route("/index.html")
@@ -43,6 +44,7 @@ def results():
     return render_template("results.html")
 
 
+# Генерация диаграммы
 
 @main.route("/api/generate", methods=["POST"])
 def generate():
@@ -52,11 +54,12 @@ def generate():
     if uploaded_file is None or not uploaded_file.filename:
         return jsonify({"error": "Файл не выбран"}), 400
 
-    filename = secure_filename(uploaded_file.filename)
-    extension = Path(filename).suffix.lower()
+    extension = Path(uploaded_file.filename).suffix.lower()
 
-    if not filename or extension not in ALLOWED_EXTENSIONS:
+    if extension not in ALLOWED_EXTENSIONS:
         return jsonify({"error": "Неподдерживаемый формат файла"}), 400
+
+    filename = f"network{extension}"
 
     profile = request.form.get("profile", "hosts")
     show_ports = request.form.get("labels", "true") == "true"
@@ -69,6 +72,7 @@ def generate():
     if profile not in {"hosts", "services", "critical"}:
         return jsonify({"error": "Неизвестный профиль"}), 400
 
+    # Для CSV дополнительно нужен файл с соединениями
     connections_filename = None
 
     if extension == ".csv":
@@ -77,30 +81,32 @@ def generate():
                 "error": "Для CSV-файла необходимо также загрузить connections.csv"
             }), 400
 
-        connections_filename = secure_filename(
-            uploaded_connections.filename
-        )
+        connections_extension = Path(uploaded_connections.filename).suffix.lower()
 
-        connections_extension = Path(connections_filename).suffix.lower()
-
-        if not connections_filename or connections_extension != ".csv":
+        if connections_extension != ".csv":
             return jsonify({
                 "error": "Файл соединений должен иметь формат CSV"
             }), 400
 
+        connections_filename = "connections.csv"
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
+            # Сохраняем основной файл
             file_path = temp_path / filename
             uploaded_file.save(file_path)
 
+            # Сохраняем файл соединений, если он загружен
             connections_path = None
 
             if connections_filename:
-                connections_path = temp_path / connections_filename
+                connections_dir = temp_path / "connections"
+                connections_dir.mkdir()
+                connections_path = connections_dir / connections_filename
                 uploaded_connections.save(connections_path)
 
+            # Запускаем обработку и генерацию диаграммы
             result = generate_network_diagram(
                 file_path,
                 profile=profile,
@@ -112,9 +118,15 @@ def generate():
         return jsonify({
             "success": True,
             "statistics": result["statistics"],
-            "png_url": "/api/result/network.png",
-            "puml_url": "/api/result/network.puml",
+            "png_url": url_for("main.get_result", filename=Path(result["png_path"]).name),
+            "puml_url": url_for("main.get_result", filename=Path(result["puml_path"]).name),
         })
+    
+    except NetworkInputError as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 400
 
     except Exception as error:
         return jsonify({
@@ -123,9 +135,14 @@ def generate():
         }), 500
 
 
+# Получение готовых файлов
 
 @main.route("/api/result/<filename>")
 def get_result(filename):
+    if not re.fullmatch(r"network(?:-[0-9a-f]{32})?\.(?:png|puml)", filename):
+        return jsonify({"error": "Файл не найден"}), 404
+
+    return send_from_directory(OUTPUT_DIR, filename)
     if filename not in {"network.png", "network.puml"}:
         return jsonify({"error": "Файл не найден"}), 404
 

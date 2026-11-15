@@ -1,4 +1,5 @@
 from pathlib import Path
+from uuid import uuid4
 
 from app.components.data_loader import load_network_file
 from app.components.processing.converter import convert_dict_to_network
@@ -16,6 +17,9 @@ from app.components.diagram_generator import (
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
 
+class NetworkInputError(ValueError):
+    pass
+
 
 def generate_network_diagram(
     file_path,
@@ -24,12 +28,20 @@ def generate_network_diagram(
     show_ports=True,
     criticality="all",
 ):
+    """
+    Основной процесс генерации сетевой диаграммы.
+    """
 
-    data = load_network_file(
-        file_path,
-        connections_file=connections_file
-    )
+    # 1. Загрузка и валидация
+    try:
+        data = load_network_file(
+            file_path,
+            connections_file=connections_file,
+        )
+    except ValueError as error:
+        raise NetworkInputError(str(error)) from error
 
+    # 2. Преобразование данных в NetworkConfig
     network = convert_dict_to_network(data)
     allowed_levels = {
         "high": {"high", "critical"},
@@ -51,29 +63,34 @@ def generate_network_diagram(
             and connection.target in visible_ids
         ]
 
+     # 3. Подготовка статистики для интерфейса
     if profile == "critical":
         statistics = process_by_criticality(network)
     else:
         statistics = process_by_hosts(network)
 
+    # 4. Генерация PlantUML
     plantuml_source = generate_plantuml(
     network,
     profile=profile,
     show_ports=show_ports,
 )
-
+    # 5. Сохранение PlantUML
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    result_name = f"network-{uuid4().hex}"
     puml_path = write_plantuml_file(
         plantuml_source,
-        OUTPUT_DIR / "network.puml"
+        OUTPUT_DIR / f"{result_name}.puml",
     )
 
+    # 6. Генерация PNG
     png_path = render_plantuml_to_png(
         puml_path,
         output_dir=OUTPUT_DIR
     )
 
+    # 7. Возврат результатов
     return {
         "statistics": statistics,
         "puml_path": str(puml_path),
