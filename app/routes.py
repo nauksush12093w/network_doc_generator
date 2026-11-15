@@ -21,7 +21,6 @@ OUTPUT_DIR = BASE_DIR / "output"
 ALLOWED_EXTENSIONS = {".json", ".yaml", ".yml", ".csv"}
 
 
-# Страницы интерфейса
 
 @main.route("/")
 @main.route("/index.html")
@@ -44,7 +43,6 @@ def results():
     return render_template("results.html")
 
 
-# Генерация диаграммы
 
 @main.route("/api/generate", methods=["POST"])
 def generate():
@@ -71,7 +69,6 @@ def generate():
     if profile not in {"hosts", "services", "critical"}:
         return jsonify({"error": "Неизвестный профиль"}), 400
 
-    # Для CSV дополнительно нужен файл с соединениями
     connections_filename = None
 
     if extension == ".csv":
@@ -95,18 +92,15 @@ def generate():
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Сохраняем основной файл
             file_path = temp_path / filename
             uploaded_file.save(file_path)
 
-            # Сохраняем файл соединений, если он загружен
             connections_path = None
 
             if connections_filename:
                 connections_path = temp_path / connections_filename
                 uploaded_connections.save(connections_path)
 
-            # Запускаем обработку и генерацию диаграммы
             result = generate_network_diagram(
                 file_path,
                 profile=profile,
@@ -129,7 +123,6 @@ def generate():
         }), 500
 
 
-# Получение готовых файлов
 
 @main.route("/api/result/<filename>")
 def get_result(filename):
