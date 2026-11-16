@@ -41,7 +41,6 @@ def generate_network_diagram(
 
     network = convert_dict_to_network(data)
 
-    # Фильтрация по критичности узлов и сервисов
     allowed_levels = {
         "high": {"high", "critical"},
         "medium": {"medium", "high", "critical"},
@@ -62,7 +61,6 @@ def generate_network_diagram(
             )
         ]
 
-        # Оставляем соединения только между видимыми узлами
         visible_ids = {host.node_id for host in network.hosts}
 
         network.connections = [
@@ -72,7 +70,6 @@ def generate_network_diagram(
             and connection.target in visible_ids
         ]
 
-    # Выбор профиля обработки
     if profile == "critical":
         statistics = process_by_criticality(network)
     elif profile == "services":
@@ -82,7 +79,6 @@ def generate_network_diagram(
     else:
         raise ValueError(f"Неизвестный профиль: {profile}")
 
-    # Генерация PlantUML
     plantuml_source = generate_plantuml(
         network,
         profile=profile,
