@@ -131,10 +131,6 @@ def generate():
 @main.route("/api/result/<filename>")
 def get_result(filename):
     if not re.fullmatch(r"network(?:-[0-9a-f]{32})?\.(?:png|puml)", filename):
-        return jsonify({"error": "Файл не найден"}), 404
-
-    return send_from_directory(OUTPUT_DIR, filename)
-    if filename not in {"network.png", "network.puml"}:
-        return jsonify({"error": "Файл не найден"}), 404
-
+        return jsonify({"error": "Недопустимое имя файла"}), 400
+    
     return send_from_directory(OUTPUT_DIR, filename)
